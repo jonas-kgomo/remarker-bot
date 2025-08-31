@@ -17,7 +17,7 @@ async function discordRequest(endpoint, options) {
         headers: {
             Authorization: `Bot ${process.env.DISCORD_TOKEN}`,
             'Content-Type': 'application/json; charset=UTF-8',
-            'User-Agent': 'RemarkAI Bot',
+            'User-Agent': 'RemarkAI',
         },
         ...options
     });
