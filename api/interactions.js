@@ -31,25 +31,90 @@ async function discordRequest(endpoint, options) {
     return res;
 }
 
-// Create thread helper
-async function createThread(channelId, claim) {
+// Generate structured stanzas for discourse
+async function generateStanzas(topic) {
+    const prompt = `Create a structured discourse starter about "${topic}" with:
+1. A main claim (1-2 sentences)
+2. Three supporting points (each 1 sentence)
+3. One potential counterargument (1 sentence)
+4. A thought-provoking question to encourage discussion
+
+Format as:
+CLAIM: [main claim]
+SUPPORT 1: [supporting point]
+SUPPORT 2: [supporting point] 
+SUPPORT 3: [supporting point]
+COUNTER: [counterargument]
+QUESTION: [discussion question]`;
+
+    try {
+        const response = await ai.generateContent({
+            model: 'gemini-2.0-flash-exp',
+            contents: [{ parts: [{ text: prompt }] }]
+        });
+        
+        return response.response.text();
+    } catch (error) {
+        console.error('Stanza generation error:', error);
+        return null;
+    }
+}
+
+// Parse stanzas into structured format
+function parseStanzas(text) {
+    const lines = text.split('\n').filter(line => line.trim());
+    const stanzas = {};
+    
+    lines.forEach(line => {
+        if (line.startsWith('CLAIM:')) stanzas.claim = line.replace('CLAIM:', '').trim();
+        if (line.startsWith('SUPPORT 1:')) stanzas.support1 = line.replace('SUPPORT 1:', '').trim();
+        if (line.startsWith('SUPPORT 2:')) stanzas.support2 = line.replace('SUPPORT 2:', '').trim();
+        if (line.startsWith('SUPPORT 3:')) stanzas.support3 = line.replace('SUPPORT 3:', '').trim();
+        if (line.startsWith('COUNTER:')) stanzas.counter = line.replace('COUNTER:', '').trim();
+        if (line.startsWith('QUESTION:')) stanzas.question = line.replace('QUESTION:', '').trim();
+    });
+    
+    return stanzas;
+}
+
+// Create thread with structured stanzas
+async function createThread(channelId, content, isStanza = false) {
+    let threadName, embed;
+    
+    if (isStanza) {
+        const stanzas = parseStanzas(content);
+        threadName = `🧠 Discourse: ${stanzas.claim?.slice(0, 30) || 'Discussion'}...`;
+        
+        embed = {
+            title: '🧠 Structured Discourse Starter',
+            fields: [
+                { name: '📍 Main Claim', value: stanzas.claim || 'No claim provided', inline: false },
+                { name: '✅ Supporting Points', value: `• ${stanzas.support1 || 'N/A'}\n• ${stanzas.support2 || 'N/A'}\n• ${stanzas.support3 || 'N/A'}`, inline: false },
+                { name: '⚠️ Potential Counter', value: stanzas.counter || 'No counter provided', inline: false },
+                { name: '🤔 Discussion Question', value: stanzas.question || 'What are your thoughts?', inline: false }
+            ],
+            footer: { text: 'React with 👍 to support, 👎 to challenge, or 🤔 to question. Reply to continue the discourse!' },
+            color: 0x7289DA
+        };
+    } else {
+        threadName = `💬 Proposal: ${content.slice(0, 40)}...`;
+        embed = {
+            title: '🤖 AI-Generated Claim',
+            description: `>>> ${content}`,
+            footer: { text: 'Reply below to support, challenge, or question this claim.' },
+            color: 0x00AE86
+        };
+    }
+    
     const thread = await discordRequest(`channels/${channelId}/threads`, {
         method: 'POST',
         body: {
-            name: `💬 Proposal: ${claim.slice(0, 40)}...`,
+            name: threadName,
             type: 11, // PUBLIC_THREAD
         }
     });
     
     const threadData = await thread.json();
-    
-    // Send starter message
-    const embed = {
-        title: '🤖 AI-Generated Claim (Editable)',
-        description: `>>> ${claim}`,
-        footer: { text: 'Reply below to support, challenge, or question this claim.' },
-        color: 0x00AE86
-    };
     
     const components = [{
         type: 1, // ACTION_ROW
@@ -57,23 +122,23 @@ async function createThread(channelId, claim) {
             {
                 type: 2, // BUTTON
                 style: 2, // SECONDARY
-                label: 'Edit Wording',
+                label: 'Edit Content',
                 emoji: { name: '✏️' },
                 custom_id: 'edit_claim'
             },
             {
                 type: 2,
                 style: 1, // PRIMARY
-                label: 'Fork Claim',
-                emoji: { name: '🔀' },
-                custom_id: 'fork_claim'
+                label: 'Add Response',
+                emoji: { name: '💭' },
+                custom_id: 'add_response'
             },
             {
                 type: 2,
-                style: 4, // DANGER
-                label: 'Delete',
-                emoji: { name: '❌' },
-                custom_id: 'delete_claim'
+                style: 3, // SUCCESS
+                label: 'Validate Graph',
+                emoji: { name: '✅' },
+                custom_id: 'validate_graph'
             }
         ]
     }];
@@ -93,15 +158,26 @@ async function createThread(channelId, claim) {
         method: 'PUT'
     });
     
-    // Store in graph (in-memory for now)
+    // Store in graph
     graph[messageData.id] = {
         parent: null,
         authorTag: 'ai',
-        content: claim,
+        content: isStanza ? content : content,
         stance: 'claim',
         children: [],
-        threadId: threadData.id
+        threadId: threadData.id,
+        isStanza: isStanza
     };
+    
+    // Send follow-up encouragement message
+    setTimeout(async () => {
+        await discordRequest(`channels/${threadData.id}/messages`, {
+            method: 'POST',
+            body: {
+                content: "👋 I'm here to help facilitate this discourse! Feel free to:\n• Share your perspective\n• Ask clarifying questions\n• Challenge any points\n• Build on the ideas presented\n\nLet's explore this topic together! 🚀"
+            }
+        });
+    }, 2000);
     
     return threadData;
 }
@@ -168,33 +244,32 @@ export default async function handler(req, res) {
         
         else if (name === 'draft') {
             const topic = options.find(opt => opt.name === 'topic').value;
-            const prompt = `Give 3 concise one-sentence claims about: ${topic}`;
             
             try {
-                const response = await ai.models.generateContent({
-                    model: 'gemini-2.0-flash-001',
-                    contents: prompt,
-                });
+                const stanzaText = await generateStanzas(topic);
                 
-                const lines = response.text.trim().split('\n')
-                    .filter(line => line.trim() && !line.match(/^\d+\.?\s*$/))
-                    .slice(0, 3);
-                
-                if (lines.length === 0) {
+                if (!stanzaText) {
                     return res.json({
                         type: 4,
                         data: {
-                            content: 'Could not generate claims. Try a different topic.',
+                            content: 'Could not generate discourse stanzas. Try a different topic.',
                             flags: 64
                         }
                     });
                 }
                 
+                const stanzas = parseStanzas(stanzaText);
+                
                 const embed = {
-                    title: '🎯 AI-Generated Claims',
-                    description: lines.map((line, i) => `${i + 1}️⃣ ${line.replace(/^\d+\.?\s*/, '')}`).join('\n\n'),
-                    footer: { text: 'Use /propose with your chosen claim to create a thread' },
-                    color: 0x00AE86
+                    title: '🎯 Generated Discourse Stanzas',
+                    fields: [
+                        { name: '📍 Main Claim', value: stanzas.claim || 'No claim generated', inline: false },
+                        { name: '✅ Supporting Points', value: `• ${stanzas.support1 || 'N/A'}\n• ${stanzas.support2 || 'N/A'}\n• ${stanzas.support3 || 'N/A'}`, inline: false },
+                        { name: '⚠️ Counter Perspective', value: stanzas.counter || 'No counter generated', inline: false },
+                        { name: '🤔 Discussion Starter', value: stanzas.question || 'What are your thoughts?', inline: false }
+                    ],
+                    footer: { text: 'Use /stanza to create a structured discourse thread with these elements' },
+                    color: 0x7289DA
                 };
                 
                 return res.json({
@@ -210,7 +285,44 @@ export default async function handler(req, res) {
                 return res.json({
                     type: 4,
                     data: {
-                        content: 'Error generating claims. Please try again.',
+                        content: 'Error generating discourse stanzas. Please try again.',
+                        flags: 64
+                    }
+                });
+            }
+        }
+        
+        else if (name === 'stanza') {
+            const topic = options.find(opt => opt.name === 'topic').value;
+            
+            try {
+                const stanzaText = await generateStanzas(topic);
+                
+                if (!stanzaText) {
+                    return res.json({
+                        type: 4,
+                        data: {
+                            content: 'Could not generate discourse stanzas. Try a different topic.',
+                            flags: 64
+                        }
+                    });
+                }
+                
+                const thread = await createThread(channel_id, stanzaText, true);
+                return res.json({
+                    type: 4,
+                    data: {
+                        content: `🧠 Structured discourse thread created: <#${thread.id}>\n\nI'll be monitoring the discussion and can help validate the discourse graph as it develops!`,
+                        flags: 64
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Stanza error:', error);
+                return res.json({
+                    type: 4,
+                    data: {
+                        content: 'Error creating discourse thread. Please check bot permissions.',
                         flags: 64
                     }
                 });
@@ -251,24 +363,95 @@ export default async function handler(req, res) {
     
     // Handle button interactions
     if (type === 3) {
-        const { custom_id } = data;
+        const { custom_id, message } = data;
         
         if (custom_id === 'edit_claim') {
             return res.json({
                 type: 9, // MODAL
                 data: {
-                    title: 'Edit Claim',
+                    title: 'Edit Content',
                     custom_id: 'edit_modal',
                     components: [{
                         type: 1, // ACTION_ROW
                         components: [{
                             type: 4, // TEXT_INPUT
                             custom_id: 'new_wording',
-                            label: 'New wording:',
+                            label: 'New content:',
                             style: 2, // PARAGRAPH
-                            required: true
+                            required: true,
+                            max_length: 1000
                         }]
                     }]
+                }
+            });
+        }
+        
+        else if (custom_id === 'add_response') {
+            return res.json({
+                type: 9, // MODAL
+                data: {
+                    title: 'Add Your Response',
+                    custom_id: 'response_modal',
+                    components: [
+                        {
+                            type: 1, // ACTION_ROW
+                            components: [{
+                                type: 4, // TEXT_INPUT
+                                custom_id: 'response_type',
+                                label: 'Response type (support/challenge/question):',
+                                style: 1, // SHORT
+                                required: true,
+                                max_length: 20
+                            }]
+                        },
+                        {
+                            type: 1, // ACTION_ROW
+                            components: [{
+                                type: 4, // TEXT_INPUT
+                                custom_id: 'response_content',
+                                label: 'Your response:',
+                                style: 2, // PARAGRAPH
+                                required: true,
+                                max_length: 500
+                            }]
+                        }
+                    ]
+                }
+            });
+        }
+        
+        else if (custom_id === 'validate_graph') {
+            const threadId = message.channel_id;
+            const nodes = Object.values(graph).filter(node => node.threadId === threadId);
+            
+            if (nodes.length === 0) {
+                return res.json({
+                    type: 4,
+                    data: {
+                        content: '🔍 No discourse data found yet. Start the conversation and I\'ll help map the discourse graph!',
+                        flags: 64
+                    }
+                });
+            }
+            
+            const validationEmbed = {
+                title: '✅ Discourse Graph Validation',
+                description: `Found ${nodes.length} discourse node(s) in this thread.`,
+                fields: nodes.map((node, i) => ({
+                    name: `Node ${i + 1}: ${node.stance.toUpperCase()}`,
+                    value: `${node.content.slice(0, 100)}${node.content.length > 100 ? '...' : ''}`,
+                    inline: false
+                })),
+                footer: { text: 'Continue the discussion to build a richer discourse graph!' },
+                color: 0x00FF00
+            };
+            
+            return res.json({
+                type: 4,
+                data: {
+                    embeds: [validationEmbed],
+                    content: '🎯 **Graph Status**: Looking good! Keep the discourse flowing to create more connections.',
+                    flags: 64
                 }
             });
         }
@@ -282,9 +465,9 @@ export default async function handler(req, res) {
             const newWording = components[0].components[0].value;
             
             const embed = {
-                title: '🤖 AI-Generated Claim (Edited)',
+                title: '🤖 Content (Edited)',
                 description: `>>> ${newWording}`,
-                footer: { text: 'Reply below to support, challenge, or question this claim.' },
+                footer: { text: 'Reply below to support, challenge, or question this content.' },
                 color: 0x00AE86
             };
             
@@ -292,6 +475,42 @@ export default async function handler(req, res) {
                 type: 7, // UPDATE_MESSAGE
                 data: {
                     embeds: [embed]
+                }
+            });
+        }
+        
+        else if (custom_id === 'response_modal') {
+            const responseType = components[0].components[0].value.toLowerCase();
+            const responseContent = components[1].components[0].value;
+            
+            // Validate response type
+            const validTypes = ['support', 'challenge', 'question'];
+            const stance = validTypes.includes(responseType) ? responseType : 'comment';
+            
+            // Create response embed
+            const responseEmbed = {
+                title: `💭 ${stance.charAt(0).toUpperCase() + stance.slice(1)} Response`,
+                description: responseContent,
+                footer: { text: 'This response has been added to the discourse graph.' },
+                color: stance === 'support' ? 0x00FF00 : stance === 'challenge' ? 0xFF0000 : 0xFFFF00
+            };
+            
+            // Store in graph (simplified for now)
+            const messageId = Date.now().toString();
+            graph[messageId] = {
+                parent: req.body.message?.id || null,
+                authorTag: req.body.member?.user?.username || 'user',
+                content: responseContent,
+                stance: stance,
+                children: [],
+                threadId: req.body.channel_id
+            };
+            
+            return res.json({
+                type: 4,
+                data: {
+                    embeds: [responseEmbed],
+                    content: `🎯 Great ${stance}! I've added this to our discourse graph. The conversation is building nicely! 🚀`
                 }
             });
         }

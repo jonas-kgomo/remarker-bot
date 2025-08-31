@@ -15,11 +15,23 @@ const commands = [
     },
     {
         name: 'draft',
-        description: 'Generate 3 AI claims about a topic',
+        description: 'Generate structured discourse stanzas about a topic',
         options: [
             {
                 name: 'topic',
-                description: 'Topic to generate claims about',
+                description: 'Topic to generate discourse stanzas about',
+                type: 3, // STRING
+                required: true
+            }
+        ]
+    },
+    {
+        name: 'stanza',
+        description: 'Create a structured discourse thread with AI-generated stanzas',
+        options: [
+            {
+                name: 'topic',
+                description: 'Topic for the structured discourse',
                 type: 3, // STRING
                 required: true
             }

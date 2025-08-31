@@ -84,8 +84,9 @@ export default function handler(req, res) {
         
         <div class="commands">
             <h3>Available Commands:</h3>
-            <div class="command">/draft [topic] - Generate AI claims about a topic</div>
-            <div class="command">/propose [text] - Create a discussion thread</div>
+            <div class="command">/draft [topic] - Generate structured discourse stanzas</div>
+            <div class="command">/stanza [topic] - Create structured discourse thread</div>
+            <div class="command">/propose [text] - Create a simple discussion thread</div>
             <div class="command">/map - View discourse map for current thread</div>
         </div>
         
