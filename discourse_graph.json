@@ -78,5 +78,29 @@
     "stance": "challenge",
     "children": [],
     "threadId": "1411764529297358878"
+  },
+  "1411785254636617789": {
+    "parent": null,
+    "authorTag": "ai",
+    "content": "\"Here\" is a deictic word, meaning its meaning depends on context.",
+    "stance": "claim",
+    "children": [],
+    "threadId": "1411785252015181958"
+  },
+  "1411786502240731228": {
+    "parent": null,
+    "authorTag": "ai",
+    "content": "Mt Everest is short",
+    "stance": "claim",
+    "children": [],
+    "threadId": "1411786500303093870"
+  },
+  "1411786684181512353": {
+    "parent": null,
+    "authorTag": "ai",
+    "content": "Here are three concise one-sentence claims about Pikachu being a dielectric:",
+    "stance": "claim",
+    "children": [],
+    "threadId": "1411786681266213026"
   }
 }
