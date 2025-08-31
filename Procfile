@@ -1,1 +1,1 @@
-worker: node bot.js
+web: node webhook-bot.js

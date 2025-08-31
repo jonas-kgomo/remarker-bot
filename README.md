@@ -27,3 +27,34 @@ The bot will have all the sophisticated AI features:
 
 Auto-classification of replies as support/challenge/question
 Editable claims with the ✏️ button
+
+
+
+Now set up your Vercel deployment:
+1. Add environment variables in Vercel dashboard:
+DISCORD_TOKEN: Your bot token
+GEMINI_API_KEY: Your Gemini API key
+PUBLIC_KEY: Your Discord app's public key
+CLIENT_ID: Your Discord app's client ID
+2. Register commands (run this once):
+node register-commands.js
+3. Set your Interactions Endpoint URL in Discord:
+Go to Discord Developer Portal → Your App → General Information → Interactions Endpoint URL:
+
+https://your-vercel-app.vercel.app/interactions
+4. Deploy to Vercel:
+vercel --prod
+What's your Vercel app URL?
+Once you tell me your Vercel URL, I can help you:
+
+Test the endpoint
+Configure the Discord webhook
+Make sure everything works
+The Vercel serverless approach is perfect for Discord bots because:
+
+✅ Zero cold start issues with Discord webhooks
+✅ Automatic scaling
+✅ Free tier is generous
+✅ Global edge network
+✅ Easy deployments via git
+What's your Vercel deployment URL?
