@@ -1,0 +1,82 @@
+{
+  "1411763454393450587": {
+    "parent": null,
+    "authorTag": "ai",
+    "content": "New wording",
+    "stance": "claim",
+    "children": [],
+    "threadId": "1411763451436470324"
+  },
+  "1411763883554635818": {
+    "parent": null,
+    "authorTag": "ai",
+    "content": "china movies are not ai generated",
+    "stance": "claim",
+    "children": [
+      "1411763993785270525",
+      "1411764053084340365",
+      "1411764081597350049",
+      "1411764106792407051"
+    ],
+    "threadId": "1411763881289973924"
+  },
+  "1411763993785270525": {
+    "parent": "1411763883554635818",
+    "authorTag": "jonaskg.",
+    "content": "is this it?",
+    "stance": "question",
+    "children": [],
+    "threadId": "1411763881289973924"
+  },
+  "1411764053084340365": {
+    "parent": "1411763883554635818",
+    "authorTag": "jonaskg.",
+    "content": "do you agree with it?",
+    "stance": "question",
+    "children": [],
+    "threadId": "1411763881289973924"
+  },
+  "1411764081597350049": {
+    "parent": "1411763883554635818",
+    "authorTag": "jonaskg.",
+    "content": "they are ai gen",
+    "stance": "challenge",
+    "children": [],
+    "threadId": "1411763881289973924"
+  },
+  "1411764106792407051": {
+    "parent": "1411763883554635818",
+    "authorTag": "jonaskg.",
+    "content": "they are not ai gen",
+    "stance": "support",
+    "children": [],
+    "threadId": "1411763881289973924"
+  },
+  "1411764532396818444": {
+    "parent": null,
+    "authorTag": "ai",
+    "content": "They overemphasize consequentialist thinking while neglecting other crucial ethical considerations like duties and relationships.",
+    "stance": "claim",
+    "children": [
+      "1411764720415015004",
+      "1411764763175817237"
+    ],
+    "threadId": "1411764529297358878"
+  },
+  "1411764720415015004": {
+    "parent": "1411764532396818444",
+    "authorTag": "jonaskg.",
+    "content": "this is a good way to think about it, but i am not a big fan of consequentialist",
+    "stance": "support",
+    "children": [],
+    "threadId": "1411764529297358878"
+  },
+  "1411764763175817237": {
+    "parent": "1411764532396818444",
+    "authorTag": "jonaskg.",
+    "content": "i do not support this claim",
+    "stance": "challenge",
+    "children": [],
+    "threadId": "1411764529297358878"
+  }
+}

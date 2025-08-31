@@ -1,0 +1,25 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/interactions.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/interactions",
+      "dest": "/api/interactions"
+    },
+    {
+      "src": "/",
+      "dest": "/api/interactions"
+    }
+  ],
+  "env": {
+    "DISCORD_TOKEN": "@discord_token",
+    "GEMINI_API_KEY": "@gemini_api_key",
+    "PUBLIC_KEY": "@public_key",
+    "CLIENT_ID": "@client_id"
+  }
+}
