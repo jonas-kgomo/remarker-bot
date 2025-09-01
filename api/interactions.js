@@ -48,10 +48,8 @@ COUNTER: [counterargument]
 QUESTION: [discussion question]`;
 
     try {
-        const response = await ai.generateContent({
-            model: 'gemini-2.0-flash-exp',
-            contents: [{ parts: [{ text: prompt }] }]
-        });
+        const model = ai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+        const response = await model.generateContent(prompt);
         
         return response.response.text();
     } catch (error) {
